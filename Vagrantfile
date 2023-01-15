@@ -27,8 +27,8 @@ Vagrant.configure("2") do |config|
   config.vm.provider :virtualbox do |vb|
       vb.name = "noeud" + numero_poste.to_s
       vb.memory = ram_en_Mo
-      vb.customize ["modifyvm", :id, "--groups", "/essai-groupe"]
-      # vb.customize ["modifyvm", :id, "--name", "noeud" + numero_poste.to_s]	# SEULEMENT SI config.vm.hostname et vb.name (qui correspond a priori à ce réglage) NE SUFFISENT PAS
+      vb.customize ['modifyvm', :id, '--groups', '/essai-groupe']
+      # vb.customize ['modifyvm', :id, '--name', 'noeud' + numero_poste.to_s]	# SEULEMENT SI config.vm.hostname et vb.name (qui correspond a priori à ce réglage) NE SUFFISENT PAS
       vb.customize ['modifyvm', :id, '--graphicscontroller', 'vmsvga']		# trouvé sur https://github.com/mrlesmithjr/vagrant-box-templates/blob/master/Vagrantfile
       vb.customize ['modifyvm', :id, '--vram', '16']
       vb.customize ['modifyvm', :id, '--description', description]
@@ -50,18 +50,23 @@ Vagrant.configure("2") do |config|
     utilisateur_principal=${1}
     echo UTILISATEUR PRINCIPAL : ${utilisateur_principal}
 
-    sed -i.bak 's/^PasswordAuthentication no/PasswordAuthentication yes/;s/^#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config && systemctl reload sshd
-
     localectl set-locale fr_FR.UTF-8
     loadkeys fr    # puisque localectl set-keymap fr semble "cassé"
+
     timedatectl set-ntp true
     timedatectl set-timezone Europe/Paris
-    apt update && apt upgrade -y && apt install -y jq gpm bat && echo alias bat=batcat >> /etc/bash.bashrc
+
+    apt update && apt upgrade -y
+    apt install -y jq gpm bat && echo alias bat=batcat >> /etc/bash.bashrc
+
+    # sed -i.bak 's/^PasswordAuthentication no/PasswordAuthentication yes/;s/^#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config && systemctl reload sshd
+    echo -e "PasswordAuthentication yes\nPermitRootLogin yes" > /etc/ssh/sshd_config.d/password_et_root_ok.conf && systemctl reload sshd
 
     # wget -O get-docker.sh https://get.docker.com/ && sh get-docker.sh && usermod -aG docker vagrant && useradd -s /bin/bash -m -G sudo,docker ${utilisateur_principal}
 
     useradd -s /bin/bash -m -r ${utilisateur_principal} ; echo -e ${utilisateur_principal}"\n"${utilisateur_principal} | passwd ${utilisateur_principal}
     echo -e "root\nroot" | passwd root
+
     mkdir -m 1777 /partage
     echo "pour tester accès NFS ou CIFS (SMB)" > /partage/index.html
     IP_KLUSTER=$(ip -4 -j a s enp0s8 | jq -r .[0].addr_info[0].local)	# -j(son) [ -br(ief) -p(retty) ]
