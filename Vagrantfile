@@ -4,6 +4,10 @@
 numero_poste = 43
 ram_en_Mo = 3072
 utilisateur_principal = "boss"
+description = <<-FIN_DESCRIPTION
+   je peux remplir ici
+   le champ description de la VM
+FIN_DESCRIPTION
 
 # All Vagrant configuration is done below. The "2" in Vagrant.configure
 # configures the configuration version (we support older styles for
@@ -27,7 +31,7 @@ Vagrant.configure("2") do |config|
       # vb.customize ["modifyvm", :id, "--name", "noeud" + numero_poste.to_s]	# SEULEMENT SI config.vm.hostname et vb.name (qui correspond a priori à ce réglage) NE SUFFISENT PAS
       vb.customize ['modifyvm', :id, '--graphicscontroller', 'vmsvga']		# trouvé sur https://github.com/mrlesmithjr/vagrant-box-templates/blob/master/Vagrantfile
       vb.customize ['modifyvm', :id, '--vram', '16']
-      vb.customize ['modifyvm', :id, '--description', 'je peux remplir ici le champ description de la VM']
+      vb.customize ['modifyvm', :id, '--description', description]
   end
 
   config.vm.network "forwarded_port", guest: 22, host: 2200 + numero_poste, id: "ssh"	# , host_ip: "127.0.0.1"
@@ -52,7 +56,7 @@ Vagrant.configure("2") do |config|
     loadkeys fr    # puisque localectl set-keymap fr semble "cassé"
     timedatectl set-ntp true
     timedatectl set-timezone Europe/Paris
-    apt update && apt upgrade -y && apt install -y jq gpm batcat && echo alias bat=batcat >> /etc/bash.bashrc
+    apt update && apt upgrade -y && apt install -y jq gpm bat && echo alias bat=batcat >> /etc/bash.bashrc
 
     # wget -O get-docker.sh https://get.docker.com/ && sh get-docker.sh && usermod -aG docker vagrant && useradd -s /bin/bash -m -G sudo,docker ${utilisateur_principal}
 
