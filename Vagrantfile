@@ -1,12 +1,18 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
+groupe = "XW335"
+nombre_de_noeuds = 3
 numero_poste = 43
 ram_en_Mo = 3072
 utilisateur_principal = "boss"
 description = <<-FIN_DESCRIPTION
-   je peux remplir ici
-   le champ description de la VM
+NE PAS TOUCHER / NE PAS UTILISER
+
+boss / boss
+root / root
+
+scripts à sourcer dans /usr/local/etc 
 FIN_DESCRIPTION
 
 # All Vagrant configuration is done below. The "2" in Vagrant.configure
@@ -27,22 +33,25 @@ Vagrant.configure("2") do |config|
   config.vm.provider :virtualbox do |vb|
       vb.name = "noeud" + numero_poste.to_s
       vb.memory = ram_en_Mo
-      vb.customize ['modifyvm', :id, '--groups', '/essai-groupe']
+      vb.customize ['modifyvm', :id, '--groups', '/' + groupe]
       # vb.customize ['modifyvm', :id, '--name', 'noeud' + numero_poste.to_s]	# SEULEMENT SI config.vm.hostname et vb.name (qui correspond a priori à ce réglage) NE SUFFISENT PAS
       vb.customize ['modifyvm', :id, '--graphicscontroller', 'vmsvga']		# trouvé sur https://github.com/mrlesmithjr/vagrant-box-templates/blob/master/Vagrantfile
       vb.customize ['modifyvm', :id, '--vram', '16']
       vb.customize ['modifyvm', :id, '--description', description]
   end
 
-  config.vm.network "forwarded_port", guest: 22, host: 2200 + numero_poste, id: "ssh"	# , host_ip: "127.0.0.1"
-  config.vm.network "private_network", ip: "192.168.100." + numero_poste.to_s, virtualbox__intnet: "kluster"
-
   # Create a public network, which generally matched to bridged network.  # Bridged networks make the machine appear as another physical device on your network.
   # config.vm.network "public_network"
+
+  config.vm.network "forwarded_port", guest: 22, host: 2200 + numero_poste, id: "ssh"	# , host_ip: "127.0.0.1"
+  config.vm.network "private_network", ip: "192.168.100." + numero_poste.to_s, virtualbox__intnet: "kluster"
 
   # Share an additional folder to the guest VM. The first argument is the path on the host to the actual folder.
   # The second argument is the path on the guest to mount the folder. And the optional third argument is a set of non-required options.
   # config.vm.synced_folder "../data", "/vagrant_data"
+
+  config.vm.provision "file", source: "coloration", destination: "/usr/local/etc/"
+  config.vm.provision "file", source: "microk8s", destination: "/usr/local/etc/"
 
   # Enable provisioning with a shell script. Additional provisioners such as Ansible, Chef, Docker, Puppet and Salt are also available.
   # Please see the documentation for more information about their specific syntax and use.
@@ -72,32 +81,38 @@ Vagrant.configure("2") do |config|
     IP_KLUSTER=$(ip -4 -j a s enp0s8 | jq -r .[0].addr_info[0].local)	# -j(son) [ -br(ief) -p(retty) ]
     cd ~root
     # SERVEUR NFS :
-    echo "if ! [ -f /root/.nfs_installed ]" > installe-serveur-nfs.bash
-    echo "then" >> installe-serveur-nfs.bash
-    echo "    apt update && apt install -y nfs-server" >> installe-serveur-nfs.bash
-    echo "    echo '/partage *(rw)' >> /etc/exports" >> installe-serveur-nfs.bash
-    echo "    systemctl reload nfs-server" >> installe-serveur-nfs.bash
-    echo "    touch /root/.nfs_installed" >> installe-serveur-nfs.bash
-    echo "fi" >> installe-serveur-nfs.bash
-    echo "echo ''" >> installe-serveur-nfs.bash
-    echo "echo 'Sur postes clients :'" >> installe-serveur-nfs.bash
-    echo -e "echo '\t echo $IP_KLUSTER servnfs >> /etc/hosts'" >> installe-serveur-nfs.bash
+    echo '#!/bin/bash' > installe-serveur-nfs.bash
+    echo 'if ! [ -f /root/.nfs_installed ]' >> installe-serveur-nfs.bash
+    echo 'then' >> installe-serveur-nfs.bash
+    echo '    apt update && apt install -y nfs-server' >> installe-serveur-nfs.bash
+    echo '    echo "/partage *(rw)" >> /etc/exports' >> installe-serveur-nfs.bash
+    echo '    systemctl reload nfs-server' >> installe-serveur-nfs.bash
+    echo '    touch /root/.nfs_installed' >> installe-serveur-nfs.bash
+    echo 'fi' >> installe-serveur-nfs.bash
+    echo 'echo ""' >> installe-serveur-nfs.bash
+    echo 'echo "Sur postes clients :"' >> installe-serveur-nfs.bash
+    echo 'echo -e "\t echo '${IP_KLUSTER}' servnfs >> /etc/hosts"' >> installe-serveur-nfs.bash
     echo 'echo -e "Puis sur Ubuntu/Debian :\n\t apt update && apt install -y nfs-common\n\t mount servnfs:/partage /mnt"' >> installe-serveur-nfs.bash
-    echo -e "echo 'Ou sur Linux Alpine :\n\t apk add --no-cache nfs-utils\n\t mount $IP_KLUSTER:/partage /mnt'" >> installe-serveur-nfs.bash
+    echo 'echo -e "Ou sur Linux Alpine :\n\t apk add --no-cache nfs-utils\n\t mount '${IP_KLUSTER}':/partage /mnt"' >> installe-serveur-nfs.bash
+    chmod +x installe-serveur-nfs.bash
     
     # SERVEUR SMB :
-    echo "if ! [ -f /root/.cifs_installed ]" > installe-serveur-cifs.bash
-    echo "then" >> installe-serveur-cifs.bash
-    echo "    apt update && apt install -y samba smbclient cifs-utils" >> installe-serveur-cifs.bash
-    echo '    echo -e "'${utilisateur_principal}'\n'${utilisateur_principal}'" | smbpasswd -a '${utilisateur_principal} >> installe-serveur-cifs.bash
+    echo '#!/bin/bash' > installe-serveur-cifs.bash
+    echo 'if ! [ -f /root/.cifs_installed ]' >> installe-serveur-cifs.bash
+    echo 'then' >> installe-serveur-cifs.bash
+    echo '    apt update && apt install -y samba smbclient cifs-utils' >> installe-serveur-cifs.bash
+    echo '    echo -e '${utilisateur_principal}'"\n"'${utilisateur_principal}' | smbpasswd -a '${utilisateur_principal} >> installe-serveur-cifs.bash
     echo '    echo -e "[partage]\n   comment = Partage\n   path = /partage\n   public = yes\n   guest ok = yes\n   available = yes\n   browsable = yes\n   write list = root '${utilisateur_principal}'\n   create mask = 0755" >> /etc/samba/smb.conf' >> installe-serveur-cifs.bash
-    echo "    systemctl reload smbd" >> installe-serveur-cifs.bash
-    echo "    touch /root/.cifs_installed" >> installe-serveur-cifs.bash
-    echo "fi" >> installe-serveur-cifs.bash
-    echo "echo ''" >> installe-serveur-cifs.bash
-    echo "echo 'Sur postes clients :'" >> installe-serveur-cifs.bash
-    echo -e "echo '\t echo $IP_KLUSTER servsmb >> /etc/hosts'" >> installe-serveur-cifs.bash
+    echo '    systemctl reload smbd' >> installe-serveur-cifs.bash
+    echo '    touch /root/.cifs_installed' >> installe-serveur-cifs.bash
+    echo 'fi' >> installe-serveur-cifs.bash
+    echo 'echo ""' >> installe-serveur-cifs.bash
+    echo 'echo "Sur postes clients :"' >> installe-serveur-cifs.bash
+    echo 'echo -e "\t echo '${IP_KLUSTER}' servsmb >> /etc/hosts"' >> installe-serveur-cifs.bash
     echo 'echo -e "Puis sur Ubuntu/Debian :\n\t apt update && apt install -y cifs-utils\n\t mount -o username='${utilisateur_principal}',password='${utilisateur_principal}' //servsmb/partage /mnt"' >> installe-serveur-cifs.bash
-    echo -e "echo 'Ou sur Linux Alpine :\n\t apk add --no-cache cifs-utils\n\t mount -o username=${utilisateur_principal},password=${utilisateur_principal} //$IP_KLUSTER/partage /mnt'" >> installe-serveur-cifs.bash
+    echo 'echo -e "Ou sur Linux Alpine :\n\t apk add --no-cache cifs-utils\n\t mount -o username='${utilisateur_principal}',password='${utilisateur_principal}' //'${IP_KLUSTER}'/partage /mnt"' >> installe-serveur-cifs.bash
+    chmod +x installe-serveur-cifs.bash
+
+    # snap install microk8s --classic
   SHELL
 end

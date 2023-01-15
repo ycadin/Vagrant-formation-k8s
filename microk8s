@@ -1,0 +1,12 @@
+if [ -s /snap/bin/microk8s ] && timeout 5s microk8s status > /dev/null 
+then
+  alias m=microk8s
+
+  if microk8s status 2> /dev/null | grep -q "is running"
+  then
+    alias kubectl="microk8s kubectl"
+    source <(microk8s kubectl completion bash)
+    alias k="microk8s kubectl"
+    source <(microk8s kubectl completion bash | sed s/kubectl/k/g)
+  fi
+fi
