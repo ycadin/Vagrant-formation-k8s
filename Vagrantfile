@@ -59,14 +59,18 @@ Vagrant.configure("2") do |config|
     utilisateur_principal=${1}
     echo UTILISATEUR PRINCIPAL : ${utilisateur_principal}
 
+    curl -O https://mirrors.edge.kernel.org/pub/linux/utils/kbd/kbd-2.5.1.tar.xz && tar xf kbd-2.5.1.tar.xz -C /tmp/ && cp -a /tmp/kbd-2.5.1/data/keymaps/ /usr/share/   # https://www.claudiokuenzler.com/blog/1257/how-to-fix-missing-keymaps-debian-ubuntu-localectl-failed-read-list
+    localectl set-keymap fr   # rendu possible avec l'enchaînement d'instructions qui précède
     localectl set-locale fr_FR.UTF-8
-    loadkeys fr    # puisque localectl set-keymap fr semble "cassé"
 
     timedatectl set-ntp true
     timedatectl set-timezone Europe/Paris
 
     apt update && apt upgrade -y
     apt install -y jq gpm bat && echo alias bat=batcat >> /etc/bash.bashrc
+
+    for N in {1..9}; do echo -e "192.168.100.$N\tnoeud$N" >> /etc/hosts; done
+    echo -e "192.168.100.99\tserveurnfs" >> /etc/hosts
 
     # sed -i.bak 's/^PasswordAuthentication no/PasswordAuthentication yes/;s/^#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config && systemctl reload sshd
     echo -e "PasswordAuthentication yes\nPermitRootLogin yes" > /etc/ssh/sshd_config.d/password_et_root_ok.conf && systemctl reload sshd
@@ -114,5 +118,7 @@ Vagrant.configure("2") do |config|
     chmod +x installe-serveur-cifs.bash
 
     # snap install microk8s --classic
+    # microk8s status --wait-ready
+    # microk8s enable dns
   SHELL
 end
