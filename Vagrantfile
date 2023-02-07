@@ -1,7 +1,8 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
-groupe = "XW335"
+groupe = "XW335-MicroK8s"
+nom_vm = "node"
 nombre_de_noeuds = 3
 numero_poste = 43
 ram_en_Mo = 3072
@@ -12,7 +13,7 @@ NE PAS TOUCHER / NE PAS UTILISER
 boss / boss
 root / root
 
-scripts à sourcer dans /usr/local/etc 
+scripts qu'il faut sourcer dans /usr/local/etc 
 FIN_DESCRIPTION
 
 # All Vagrant configuration is done below. The "2" in Vagrant.configure
@@ -29,15 +30,16 @@ Vagrant.configure("2") do |config|
   # Disable automatic box update checking. If you disable this, then boxes will only be checked for updates when the user runs `vagrant box outdated`. This is not recommended.
   # config.vm.box_check_update = false
 
-  config.vm.hostname = "noeud" + numero_poste.to_s
+  config.vm.hostname = nom_vm + numero_poste.to_s
   config.vm.provider :virtualbox do |vb|
-      vb.name = "noeud" + numero_poste.to_s
+      vb.name = nom_vm + numero_poste.to_s
       vb.memory = ram_en_Mo
       vb.customize ['modifyvm', :id, '--groups', '/' + groupe]
-      # vb.customize ['modifyvm', :id, '--name', 'noeud' + numero_poste.to_s]	# SEULEMENT SI config.vm.hostname et vb.name (qui correspond a priori à ce réglage) NE SUFFISENT PAS
+      # vb.customize ['modifyvm', :id, '--name', nom_vm + numero_poste.to_s]	# SEULEMENT SI config.vm.hostname et vb.name (qui correspond a priori à ce réglage) NE SUFFISENT PAS
       vb.customize ['modifyvm', :id, '--graphicscontroller', 'vmsvga']		# trouvé sur https://github.com/mrlesmithjr/vagrant-box-templates/blob/master/Vagrantfile
       vb.customize ['modifyvm', :id, '--vram', '16']
       vb.customize ['modifyvm', :id, '--description', description]
+      vb.customize ["modifyvm", :id, "--uartmode1", "disconnected"]		# alternativement : vb.customize [ "modifyvm", :id, "--uart1", "off" ]  (trouvé dans https://stackoverflow.com/questions/59964319/removing-default-serial-port-from-vagrant)
   end
 
   # Create a public network, which generally matched to bridged network.  # Bridged networks make the machine appear as another physical device on your network.
@@ -49,15 +51,19 @@ Vagrant.configure("2") do |config|
   # Share an additional folder to the guest VM. The first argument is the path on the host to the actual folder.
   # The second argument is the path on the guest to mount the folder. And the optional third argument is a set of non-required options.
   # config.vm.synced_folder "../data", "/vagrant_data"
+  config.vm.synced_folder '.', '/vagrant', disabled: true			# trouvé dans https://superuser.com/questions/756758/is-it-possible-to-disable-default-vagrant-synced-folder (ainsi que le moyen d'en faire un réglage par défaut)
 
-  config.vm.provision "file", source: "coloration", destination: "/usr/local/etc/"
-  config.vm.provision "file", source: "microk8s", destination: "/usr/local/etc/"
+  config.vm.provision "file", source: "coloration", destination: "/tmp/"
+  config.vm.provision "file", source: "microk8s", destination: "/tmp/"
 
   # Enable provisioning with a shell script. Additional provisioners such as Ansible, Chef, Docker, Puppet and Salt are also available.
   # Please see the documentation for more information about their specific syntax and use.
-  config.vm.provision "shell", args: utilisateur_principal, inline: <<-SHELL
-    utilisateur_principal=${1}
+  config.vm.provision "shell", args: "nom_vm utilisateur_principal", inline: <<-SHELL
+    nom_machine=${1}
+    utilisateur_principal=${2}
     echo UTILISATEUR PRINCIPAL : ${utilisateur_principal}
+
+    cp /tmp/{coloration,microk8s} /usr/local/etc/
 
     curl -O https://mirrors.edge.kernel.org/pub/linux/utils/kbd/kbd-2.5.1.tar.xz && tar xf kbd-2.5.1.tar.xz -C /tmp/ && cp -a /tmp/kbd-2.5.1/data/keymaps/ /usr/share/   # https://www.claudiokuenzler.com/blog/1257/how-to-fix-missing-keymaps-debian-ubuntu-localectl-failed-read-list
     localectl set-keymap fr   # rendu possible avec l'enchaînement d'instructions qui précède
@@ -69,7 +75,7 @@ Vagrant.configure("2") do |config|
     apt update && apt upgrade -y
     apt install -y jq gpm bat && echo alias bat=batcat >> /etc/bash.bashrc
 
-    for N in {1..9}; do echo -e "192.168.100.$N\tnoeud$N" >> /etc/hosts; done
+    for N in {1..9}; do echo -e "192.168.100.$N\t${nom_machine}$N" >> /etc/hosts; done
     echo -e "192.168.100.99\tserveurnfs" >> /etc/hosts
 
     # sed -i.bak 's/^PasswordAuthentication no/PasswordAuthentication yes/;s/^#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config && systemctl reload sshd
@@ -120,5 +126,7 @@ Vagrant.configure("2") do |config|
     # snap install microk8s --classic
     # microk8s status --wait-ready
     # microk8s enable dns
+    
+    reboot
   SHELL
 end
