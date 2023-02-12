@@ -1,7 +1,5 @@
-Rédiger les commandes qui permettront de réunir les 3 noeuds en un cluster Microk8s.
+Voir si je peux "remettre" des caractères diacritiques dans le Vagrantfile (ou au pire en post-"prod" avec commande VBoxManage)
 
-Installation de configuration de kubecolor (alias kc pour KubeColor ?)
-
-Essayer de voir si je peux "remettre" des caractères diacritiques dans le Vagrantfile (ou au pire en post-"prod" avec commande VBoxManage)
-
-Rendre public le dépôt GitHub correspondant
+Pour améliorer le fichier Vagrantfile :
+  - exemple de lecture de fichier (File.read) et surtout d'interpolation ("literal#{expression}") dans https://stackoverflow.com/questions/25094819/how-should-we-externalize-variables-in-a-vagrantfile
+  - ??? https://ctrlnotes.com/vagrant-advanced-examples/
