@@ -5,4 +5,4 @@
 
 vagrant halt
 
-vboxmanage export $(vagrant status | awk '/)$/{ print $1 }') --ovf20 --options=manifest --output ~/Documents/test-export-cli.ova
+vboxmanage export $(vagrant status | awk '/)$/{ print $1 }') --ovf20 --options=manifest --output ~/Documents/XW335-MicroK8s.ova
