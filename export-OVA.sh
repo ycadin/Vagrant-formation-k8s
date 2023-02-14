@@ -1,4 +1,4 @@
-DEBUG=echo	# enlever echo pour ne pas être en mode debug
+DEBUG=   # affecter "echo" comme valeur pour activer le mode debug / enlever "echo" pour désactiver le mode debug
 
 if [[ "${1,,}" == -h || "${1,,}" == --help ]]
 then
