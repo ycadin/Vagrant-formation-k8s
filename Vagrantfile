@@ -1,21 +1,14 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
-groupe = "XW335-MicroK8s"
-prefixe_nom_vm = "node"
-ram_en_Mo = 3072
+prefixe_nom_vm = "noeud"   # les valeurs de cette définition et des 3 suivantes sont choisies pour coïncider avec le schéma (Keynote) 
+numero_premier_noeud = 1
 nombre_de_noeuds = 3
-numero_premier_noeud = 43
 prefixe_reseau = "192.168.100."
+groupe = "XW335-MicroK8s"
 utilisateur_principal = "boss"
-description = <<-FIN_DESCRIPTION
-NE PAS TOUCHER / NE PAS UTILISER
-
-utilisateur_principal / utilisateur_principal
-root / root
-
-scripts à sourcer dans /usr/local/etc
-FIN_DESCRIPTION
+description = "NE PAS TOUCHER / NE PAS UTILISER\n\n" + utilisateur_principal + " / " + utilisateur_principal + "\nroot / root\n\nDes scripts (qu'il faut \"sourcer\") se trouvent dans /usr/local/etc"
+ram_en_Mo = 3072
 
 # All Vagrant configuration is done below. The "2" in Vagrant.configure
 # configures the configuration version (we support older styles for
@@ -28,7 +21,8 @@ Vagrant.configure("2") do |config|
     numero_dernier_noeud = numero_premier_noeud + nombre_de_noeuds - 1
 
     (numero_premier_noeud..numero_dernier_noeud).each do |numero_noeud|
-        nom_vm = prefixe_nom_vm + "%02d" % numero_noeud
+       # nom_vm = prefixe_nom_vm + "%02d" % numero_noeud
+        nom_vm = prefixe_nom_vm + numero_noeud.to_s
 
         config.vm.define nom_vm do |machine|
             # Every Vagrant development environment requires a box. You can search for boxes at https://vagrantcloud.com/search.
