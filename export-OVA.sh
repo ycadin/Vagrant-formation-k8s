@@ -1,3 +1,5 @@
+#!/bin/bash
+
 DEBUG=   # affecter "echo" comme valeur pour activer le mode debug / enlever "echo" pour désactiver le mode debug
 
 if [[ "${1,,}" == -h || "${1,,}" == --help ]]
@@ -33,14 +35,20 @@ fi
 
 $DEBUG vagrant halt	# à la place de vagrant ssh $NOEUD -c "sudo halt -p" appliqué à chaque machine
 
-$DEBUG vboxmanage export $(vagrant status | awk '/)$/{ print $1 }') --ovf20 --options=manifest --output "$DOSSIER_OVA_LOCAL$NOM_ARCHIVE".ova
-
-if [[ "${COPIER^}" != N* ]]
+if $DEBUG vboxmanage export $(vagrant status | awk '/)$/{ print $1 }') --ovf20 --options=manifest --output "$DOSSIER_OVA_LOCAL$NOM_ARCHIVE".ova
 then
-	cd "$DOSSIER_OVA_LOCAL"
-	$DEBUG sha256sum "$NOM_ARCHIVE".ova | $DEBUG tee $(basename "$NOM_ARCHIVE".SHA256SUM.txt)
+	chmod a+r "$DOSSIER_OVA_LOCAL$NOM_ARCHIVE".ova
 
-	[ -n "$PASSE_SSH" ] && SSHPASS="sshpass -p $PASSE_SSH"
-	$DEBUG $SSHPASS scp "$NOM_ARCHIVE"* $MACHINE_DISTANTE:"'$DOSSIER_OVA_DISTANT'" && echo "$NOM_ARCHIVE.ova copié sur $MACHINE_DISTANTE dans '$DOSSIER_OVA_DISTANT'"
-	$DEBUG $SSHPASS ssh $MACHINE_DISTANTE "cd '$DOSSIER_OVA_DISTANT' ; sha256sum -c '$NOM_ARCHIVE.SHA256SUM.txt'"
+	if [[ "${COPIER^}" != N* ]]
+	then
+		cd "$DOSSIER_OVA_LOCAL"
+		$DEBUG sha256sum "$NOM_ARCHIVE".ova | $DEBUG tee $(basename "$NOM_ARCHIVE".SHA256SUM.txt)
+
+		[ -n "$PASSE_SSH" ] && SSHPASS="sshpass -p $PASSE_SSH"
+
+		if $DEBUG $SSHPASS scp "$NOM_ARCHIVE".ova $(basename "$NOM_ARCHIVE".SHA256SUM.txt) $MACHINE_DISTANTE:"'$DOSSIER_OVA_DISTANT'" && echo "$NOM_ARCHIVE.ova copié sur $MACHINE_DISTANTE dans '$DOSSIER_OVA_DISTANT'"
+		then
+			$DEBUG $SSHPASS ssh $MACHINE_DISTANTE "cd '$DOSSIER_OVA_DISTANT' ; sha256sum -c '$NOM_ARCHIVE.SHA256SUM.txt'"
+		fi
+	fi
 fi
